@@ -3,14 +3,14 @@ __pycache__/
 *.pyc
 
 # Hugging Face / Torch models
-*.bingit status
-
+*.bin
 *.pt
 *.safetensors
 .cache/
 .huggingface/
 
 # Virtual environment
+.venv/
 venv/
 .env/
 
