@@ -1,82 +1,150 @@
+### A Real-Time Vision–Language Assistive System for Visually Impaired Users
 
-# SmolVLM Real-Time Webcam Demo
+---
 
-**ForkingInString:** I use OpenCV and Hugging Face BLIP to turn webcam video into instant live captions and object detection.
+## Overview
 
-**Creator/Dev:** [dev-tubakhxn]
+**See and Tell** is a real-time, offline assistive system designed to help visually impaired users understand their surroundings through **spoken natural language descriptions**.
 
-Local-first real-time webcam experience inspired by HuggingFace SmolVLM demos. The app continuously captures frames, runs a lightweight BLIP vision-language model, and overlays natural language descriptions plus detected handheld objects/actions on screen.
+The system captures live video from a camera, analyzes the scene using a **vision–language model**, and converts visual understanding into **audio feedback**.  
+It focuses on **context awareness**, not just object detection, and aims to improve independence in everyday indoor environments.
 
-## Features
-- Live webcam capture with threaded frame reader for smooth FPS
-- Configurable sampling interval so inference does not block rendering
-- BLIP captioning model (runs on CPU or GPU) for natural-language descriptions
-- Sliding-window smoothing to reduce caption flicker
-- Keyword-based object/action extraction for quick status badges
-- Overlay HUD renders description, detected objects, actions, and FPS
-- Graceful shutdown on `q` or `ESC`
+---
 
-## Project Layout
+## Motivation
+
+Visually impaired individuals often face challenges such as:
+- Identifying objects around them
+- Understanding nearby activities
+- Finding misplaced personal items
+- Navigating indoor spaces safely
+
+Many existing solutions are:
+- Expensive or uncomfortable (wearables)
+- Limited to object labels only
+- Cloud-dependent, causing latency and privacy concerns
+
+This project explores a **local-first, privacy-preserving assistive approach** using Vision–Language AI.
+
+---
+
+## Key Features
+
+- 🎥 Live webcam capture  
+- 🧠 Vision–Language scene understanding  
+- 🗣️ Offline audio narration  
+- 🔄 Asynchronous processing for smooth performance  
+- 🧩 Caption stabilization to reduce noise  
+- 🧠 Short-term object memory for misplaced items  
+- 🔐 Fully offline and privacy-friendly  
+
+---
+
+## How the System Works
+
+1. The camera continuously captures video frames.
+2. Frames are processed asynchronously by a vision–language model.
+3. The model generates a natural language description of the scene.
+4. Descriptions are stabilized to avoid flickering output.
+5. The final caption is converted into speech and played to the user.
+6. Detected objects are temporarily remembered for later reference.
+
+All components operate **without internet connectivity**.
+
+---
+
+## Technologies Used
+
+- **Python** – core programming language  
+- **OpenCV** – real-time webcam capture and frame handling  
+- **BLIP (Bootstrapped Language–Image Pretraining)** – vision–language model for image captioning  
+- **PyTorch** – deep learning inference framework  
+- **Windows Speech API (SAPI)** – offline text-to-speech narration  
+- **Multithreading and queues** – real-time system stability  
+
+---
+
+## Project Structure
+
 ```
+
 main.py
 camera/
-  webcam.py          # threaded OpenCV capture helper
+webcam.py
 vision/
-  model.py           # Hugging Face BLIP wrapper
-  inference.py       # sampling, smoothing, keyword extraction
+model.py
+inference.py
 utils/
-  config.py          # environment-aware configuration
-  fps.py             # moving-average FPS counter
+config.py
+fps.py
+tts.py
 requirements.txt
 README.md
-```
+LICENSE
 
-## Prerequisites
-- Python 3.10+
-- Webcam accessible by OpenCV
-- (Optional) CUDA-compatible GPU for faster captions
+````
+
+---
 
 ## Installation
+
 ```bash
 python -m venv .venv
-. .venv/Scripts/activate            # On Windows PowerShell: .\.venv\Scripts\Activate.ps1
+. .venv/Scripts/activate   # Windows PowerShell
 pip install --upgrade pip
 pip install -r requirements.txt
-```
+````
 
-> **Tip:** The first BLIP download happens automatically the first time you run the app and is cached under `~/.cache/huggingface`.
+> The vision–language model is downloaded automatically on first run and cached locally.
 
-## Running the App
+---
+
+## Running the Application
+
 ```bash
 python main.py
 ```
-Press `q` or `ESC` to exit. The overlay displays FPS, current caption, detected objects, and actions.
+
+* The camera feed starts automatically
+* Audio narration begins once the vision system is active
+* Press `q` or `ESC` to exit
+
+---
 
 ## Configuration
-Tune behavior via environment variables (defaults in `utils/config.py`):
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `APP_CAMERA_INDEX` | Webcam index passed to OpenCV | `0` |
-| `APP_FRAME_WIDTH` / `APP_FRAME_HEIGHT` | Requested capture size | `1280` / `720` |
-| `APP_SAMPLE_INTERVAL` | Milliseconds between VLM inferences | `750` |
-| `APP_SMOOTHING_WINDOW` | Caption smoothing window size | `3` |
-| `APP_MODEL_NAME` | Hugging Face model identifier | `Salesforce/blip-image-captioning-base` |
-| `APP_DEVICE` | `cpu`, `cuda`, or `auto` | `auto` |
-| `APP_MAX_CAPTION_TOKENS` | Max new tokens during generation | `60` |
+The system can be customized using environment variables (defaults in `utils/config.py`):
 
-Example (PowerShell):
-```powershell
-$env:APP_SAMPLE_INTERVAL=500
-$env:APP_DEVICE="cuda"
-python main.py
-```
+| Variable              | Description                      |
+| --------------------- | -------------------------------- |
+| `APP_CAMERA_INDEX`    | Camera device index              |
+| `APP_SAMPLE_INTERVAL` | Time gap between inferences      |
+| `APP_MODEL_NAME`      | Vision–Language model identifier |
+| `APP_DEVICE`          | CPU / GPU selection              |
 
-## Troubleshooting
-- **Camera busy / cannot open:** Ensure no other app uses the webcam, or change `APP_CAMERA_INDEX`.
-- **Slow captions on CPU:** Increase `APP_SAMPLE_INTERVAL` to sample less frequently.
-- **Model download errors:** Run `huggingface-cli login` if the model requires authentication or retry when the network is stable.
+---
 
-## Extending
-- Swap `APP_MODEL_NAME` for another captioning/VLM checkpoint that Hugging Face Transformers supports.
-- Replace `ObjectActionExtractor` with a more advanced parser or detector (e.g., Grounding DINO or open-vocabulary detectors) without touching the UI loop.
+## Limitations
+
+* Caption accuracy depends on lighting and camera viewpoint
+* Vision–Language models may generate generic descriptions in complex scenes
+* Object memory is short-term by design to preserve privacy
+
+---
+
+## Future Enhancements
+
+* Voice-based user interaction
+* Multilingual audio output
+* Mobile or wearable deployment
+* Confidence-aware narration
+* Improved object tracking
+
+---
+
+## License
+
+This project is licensed under the **MIT License**.
+
+It uses a pre-trained Vision–Language model (BLIP) provided by its original authors under their respective license.
+Model weights are **not distributed** with this repository.
