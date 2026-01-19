@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="status-bar">
+        <div id="status-light" class="status-light"></div>
+        <span id="status-text">CONNECTING...</span>
+    </div>
+
+    <div class="card caption-card">
+        <h3>Live Caption</h3>
+        <p id="caption-text">Waiting for caption...</p>
+        <div class="tags" id="caption-tags">
+            <!-- Tags injected by JS -->
+        </div>
+        <div class="timestamp" id="caption-time"></div>
+    </div>
+
+    <div class="dashboard-actions">
+        <button onclick="fetchCaption()" class="btn btn-secondary">Refresh Caption</button>
+        <button onclick="readAloud()" class="btn btn-primary btn-large">Read Aloud</button>
+        <button onclick="addToMemory()" class="btn btn-accent">Add to Memory</button>
+    </div>
+</div>
+{% endblock %}

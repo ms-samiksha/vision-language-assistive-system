@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+    <h2>Object Memory</h2>
+    
+    <button onclick="clearMemory()" class="btn btn-danger">Clear Memory</button>
+
+    <table class="memory-table">
+        <thead>
+            <tr>
+                <th>Object</th>
+                <th>Description</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for memory in memories %}
+            <tr>
+                <td>{{ memory.object }}</td>
+                <td>{{ memory.description }}</td>
+                <td>{{ memory.timestamp }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3">No memories saved yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
