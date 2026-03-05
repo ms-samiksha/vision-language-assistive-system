@@ -35,23 +35,20 @@ class ObjectActionExtractor:
     """Extract coarse objects/actions mentioned inside captions."""
 
     OBJECTS = {
-        "bottle",
-        "can",
-        "phone",
-        "book",
-        "cup",
-        "mug",
-        "laptop",
-        "keyboard",
-        "mouse",
-        "remote",
-        "controller",
-        "bag",
-        "watch",
-        "glasses",
-        "pen",
-        "pencil",
-        "tablet",
+        "person",
+    "bottle","water","drink",
+    "phone","cell","mobile",
+    "book","notebook",
+    "cup","mug","glass",
+    "laptop","computer",
+    "keyboard","mouse",
+    "remote","controller",
+    "bag","backpack",
+    "watch","clock",
+    "glasses","spectacles",
+    "pen","pencil",
+    "tablet",
+    "desk","table",
     }
     ACTIONS = {
         "holding",
@@ -71,6 +68,7 @@ class ObjectActionExtractor:
     def extract(self, caption: str) -> Tuple[List[str], List[str]]:
         text = caption.lower()
         tokens = set(re.findall(r"[a-zA-Z]+", text))
+        tokens.update(text.split())
         objects = sorted(token for token in self.OBJECTS if token in tokens)
         actions = sorted(token for token in self.ACTIONS if token in tokens)
         return objects, actions
@@ -125,12 +123,39 @@ class FrameAnalyzer:
     def _to_pil(self, frame) -> Image.Image:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         return Image.fromarray(rgb)
+    
 
+    def _clean_caption(self, text: str) -> str:
+        replacements = {
+            "woman": "person",
+            "man": "person",
+            "boy": "person",
+            "girl": "person",
+            "a close up of": "",
+            "an image of": "",
+            "a photo of": "",
+            "plate of food": "",
+            "pizza": "",
+            "kitchen": "room",
+            "bathroom": "room",
+            "in a bathroom": "in a room",
+            "in the bathroom": "in a room",
+            "there is": "",
+            "there are": "",
+        }
+
+        for k, v in replacements.items():
+            text = text.replace(k, v)
+        return text.strip()
+
+    
     def _process(self, frame, now: float) -> None:
+        frame = cv2.convertScaleAbs(frame, alpha=1.2, beta=10)
         pil_image = self._to_pil(self._downscale(frame))
         caption = self.model.describe(
             pil_image, max_tokens=self.config.max_caption_tokens
         )
+        caption = self._clean_caption(caption)
         smoothed = self.smoother.push(caption)
         objects, actions = self.extractor.extract(smoothed)
         self._state = FrameDescription(
@@ -140,7 +165,7 @@ class FrameAnalyzer:
             timestamp=now,
         )
         self._last_sample = now
-
+    
     def _worker_loop(self) -> None:
         while self._running:
             now = time.perf_counter()
@@ -160,7 +185,7 @@ class FrameAnalyzer:
             except Exception:
                 # Keep the worker alive even if inference fails once.
                 self._idle()
-
+    
     def analyze(self, frame) -> FrameDescription:
         if frame is not None:
             with self._frame_lock:

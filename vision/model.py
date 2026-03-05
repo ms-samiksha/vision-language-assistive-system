@@ -31,17 +31,21 @@ class VisionLanguageModel:
         return torch.device("cpu")
 
     def describe(self, image, max_tokens: int = 60) -> str:
-        """Generate a natural language description for a PIL image."""
         with self._lock:
             with torch.inference_mode():
+
                 inputs = self.processor(images=image, return_tensors="pt").to(self.device)
+
                 output_ids = self.model.generate(
                     **inputs,
                     max_new_tokens=max_tokens,
                     num_beams=3,
                     repetition_penalty=1.1,
+                    do_sample=False
                 )
-        caption = self.processor.tokenizer.decode(
-            output_ids[0], skip_special_tokens=True
-        )
-        return caption.strip()
+
+                caption = self.processor.tokenizer.decode(
+                    output_ids[0], skip_special_tokens=True
+                )
+
+                return caption.strip()
