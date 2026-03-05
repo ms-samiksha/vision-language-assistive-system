@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>Sign Up</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div class="form-group">
+            <label for="vision_assistance_level">Vision Assistance Level</label>
+            <select id="vision_assistance_level" name="vision_assistance_level">
+                <option value="Standard">Standard</option>
+                <option value="Low Vision">Low Vision (High Contrast)</option>
+                <option value="Fully Blind">Fully Blind (Voice First)</option>
+            </select>
+        </div>
+        <div class="form-group checkbox-group">
+            <label for="auto_speak">Auto Speak Captions</label>
+            <input type="checkbox" id="auto_speak" name="auto_speak" checked>
+        </div>
+        <div class="form-group">
+            <label for="speech_rate">Speech Rate (140-190)</label>
+            <input type="range" id="speech_rate" name="speech_rate" min="140" max="190" value="165">
+        </div>
+        <div class="form-group">
+            <label for="important_objects">Important Objects (comma separated)</label>
+            <input type="text" id="important_objects" name="important_objects" placeholder="keys, phone, wallet">
+        </div>
+        <button type="submit" class="btn btn-primary">Sign Up</button>
+    </form>
+    <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+</div>
+{% endblock %}

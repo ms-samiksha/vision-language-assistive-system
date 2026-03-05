@@ -1,0 +1,14 @@
+[
+  {
+    "username": "samiksha",
+    "password": "scrypt:32768:8:1$YDCJxF37SPsaJQ3V$31fa25287e200de06fd15e02c91b33fbdd86a71fea324faac764d9f406c5b96e1d1644411af4caec674eb9b87187d70f60820feff4d373b15e6f71029363bc5e",
+    "vision_assistance_level": "Fully Blind",
+    "auto_speak": true,
+    "speech_rate": 175,
+    "important_objects": [
+      "keys",
+      "wallet",
+      "fridge"
+    ]
+  }
+]
