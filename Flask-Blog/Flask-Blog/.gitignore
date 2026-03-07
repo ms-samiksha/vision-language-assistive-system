@@ -4,3 +4,23 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+# AI generated notes
+summary.md
+todo.md
+notes.md
+
+# temporary docs
+*.log
+*.tmp
+
+# python
+__pycache__/
+*.pyc
+
+# node
+node_modules/
+.next/
+
+# env
+.env
+venv/

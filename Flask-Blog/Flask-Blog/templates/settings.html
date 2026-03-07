@@ -2,29 +2,49 @@
 
 {% block content %}
 <div class="page-container">
-    <h2>Settings</h2>
+    <h2>⚙️ Settings</h2>
+
     <form method="POST">
         <div class="form-group">
             <label for="vision_assistance_level">Vision Assistance Level</label>
             <select id="vision_assistance_level" name="vision_assistance_level">
-                <option value="Standard" {% if user.vision_assistance_level == 'Standard' %}selected{% endif %}>Standard</option>
-                <option value="Low Vision" {% if user.vision_assistance_level == 'Low Vision' %}selected{% endif %}>Low Vision</option>
+                <option value="Standard"    {% if user.vision_assistance_level == 'Standard'    %}selected{% endif %}>Standard</option>
+                <option value="Low Vision"  {% if user.vision_assistance_level == 'Low Vision'  %}selected{% endif %}>Low Vision</option>
                 <option value="Fully Blind" {% if user.vision_assistance_level == 'Fully Blind' %}selected{% endif %}>Fully Blind</option>
             </select>
         </div>
-        <div class="form-group checkbox-group">
-            <label for="auto_speak">Auto Speak Captions</label>
-            <input type="checkbox" id="auto_speak" name="auto_speak" {% if user.auto_speak %}checked{% endif %}>
-        </div>
+
         <div class="form-group">
-            <label for="speech_rate">Speech Rate (140-190)</label>
-            <input type="range" id="speech_rate" name="speech_rate" min="140" max="190" value="{{ user.speech_rate }}">
+            <div class="checkbox-group">
+                <input type="checkbox" id="auto_speak" name="auto_speak"
+                       {% if user.auto_speak %}checked{% endif %}>
+                <label for="auto_speak">Auto-speak captions</label>
+            </div>
         </div>
+
         <div class="form-group">
-            <label for="important_objects">Important Objects</label>
-            <input type="text" id="important_objects" name="important_objects" value="{{ user.important_objects|join(', ') }}">
+            <label for="speech_rate">
+                Speech Rate (slower ← → faster) &nbsp;
+                <span id="rate-value" style="color:#7c6af7;">{{ user.speech_rate }}</span>
+            </label>
+            <input type="range" id="speech_rate" name="speech_rate"
+                   min="140" max="190" value="{{ user.speech_rate }}"
+                   oninput="document.getElementById('rate-value').textContent = this.value">
         </div>
-        <button type="submit" class="btn btn-primary">Save Changes</button>
+
+        <div class="form-group">
+            <label for="important_objects">
+                Important Objects <span style="color:#555;">(comma-separated)</span>
+            </label>
+            <input type="text" id="important_objects" name="important_objects"
+                   value="{{ user.important_objects|join(', ') }}"
+                   placeholder="phone, keys, wallet, glasses">
+            <p style="font-size:0.78rem; color:#555; margin-top:0.35rem;">
+                These objects will be auto-saved to memory whenever seen.
+            </p>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-large">Save Changes</button>
     </form>
 </div>
 {% endblock %}

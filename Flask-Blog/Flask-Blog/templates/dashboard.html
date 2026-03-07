@@ -1,25 +1,348 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="dashboard-container">
-    <div class="status-bar">
-        <div id="status-light" class="status-light"></div>
-        <span id="status-text">CONNECTING...</span>
+<div style="
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 3rem - 3rem);
+    background: #0a0a0f;
+    padding-bottom: 3rem;
+">
+
+    <!-- ── Status + control strip ── -->
+    <div style="
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.4rem 1rem;
+        background: #0d0d14;
+        border-bottom: 1px solid #1e1e2e;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+    " role="status" aria-live="polite">
+
+        <!-- Status dot -->
+        <div id="status-light" class="status-light" style="
+            width:8px; height:8px; border-radius:50%; background:#555;
+            transition: background 0.3s; flex-shrink:0;
+        "></div>
+        <span id="status-text" style="font-size:0.72rem; color:#555; text-transform:uppercase; letter-spacing:.08em; min-width:55px;">
+            STOPPED
+        </span>
+        <span id="caption-time" style="font-size:0.7rem; color:#444; flex:1;"></span>
+
+        <!-- Buttons — onclick calls functions defined in the <script> below -->
+        <button onclick="triggerStart()"      class="btn btn-accent"    style="padding:0.25rem 0.65rem;font-size:0.75rem;" title="Say 'start' or click">▶ Start</button>
+        <button onclick="triggerStop()"       class="btn btn-secondary" style="padding:0.25rem 0.65rem;font-size:0.75rem;" title="Say 'stop' or click">⏹ Stop</button>
+        <button onclick="triggerSearch()"     class="btn btn-warning"   style="padding:0.25rem 0.65rem;font-size:0.75rem;" title="Say 'search' or click">🔍 Search</button>
+        <button onclick="readAloud()"         class="btn btn-primary"   style="padding:0.25rem 0.65rem;font-size:0.75rem;">🔊 Read</button>
+        <button onclick="addToMemory()"       class="btn btn-accent"    style="padding:0.25rem 0.65rem;font-size:0.75rem;">💾 Save</button>
     </div>
 
-    <div class="card caption-card">
-        <h3>Live Caption</h3>
-        <p id="caption-text">Waiting for caption...</p>
-        <div class="tags" id="caption-tags">
-            <!-- Tags injected by JS -->
+    <!-- ── Camera feed ── -->
+    <div style="
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #050508;
+        overflow: hidden;
+        position: relative;
+    ">
+        <!-- MJPEG stream — server streams placeholder frames until started -->
+        <img id="camera-feed"
+             src="/api/camera/stream"
+             alt="Live camera feed"
+             style="max-width:100%; max-height:100%; object-fit:contain; display:block;">
+
+        <!-- Shown when camera is not yet active -->
+        <div id="cam-placeholder" style="
+            display: flex;
+            position: absolute; inset: 0;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 0.75rem;
+            color: #333; text-align: center;
+            pointer-events: none;
+        ">
+            <div style="font-size:3.5rem;">📷</div>
+            <div style="font-size:0.88rem; line-height:1.6;">
+                Camera will appear here.<br>
+                Say <strong style="color:#7c6af7">"start"</strong> or click ▶ Start to begin.
+            </div>
         </div>
-        <div class="timestamp" id="caption-time"></div>
+
+        <!-- Search mode overlay — covers camera while searching -->
+        <div id="search-overlay" style="
+            display: none;
+            position: absolute; inset: 0;
+            background: rgba(5,5,8,0.88);
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 0.75rem;
+            text-align: center; padding: 2rem;
+        ">
+            <div style="font-size:2.5rem;">🔍</div>
+            <div style="font-size:1.05rem; color:#e8e8f0; font-weight:600;">Search Mode Active</div>
+            <div id="search-hint" style="font-size:0.88rem; color:#aaa; line-height:1.6;">
+                Say what you're looking for.<br>
+                <em>e.g. "where is my phone"</em>
+            </div>
+            <!-- Result appears here -->
+            <div id="search-result-text" style="
+                display:none;
+                font-size:0.95rem; color:#22c55e;
+                background:#0a1a0a; border:1px solid #22c55e;
+                border-radius:8px; padding:0.75rem 1.25rem;
+                max-width:400px; line-height:1.5;
+            "></div>
+            <button onclick="triggerStopSearch()" class="btn btn-secondary" style="margin-top:0.5rem; font-size:0.82rem;">
+                ✕ Done Searching
+            </button>
+        </div>
     </div>
 
-    <div class="dashboard-actions">
-        <button onclick="fetchCaption()" class="btn btn-secondary">Refresh Caption</button>
-        <button onclick="readAloud()" class="btn btn-primary btn-large">Read Aloud</button>
-        <button onclick="addToMemory()" class="btn btn-accent">Add to Memory</button>
+    <!-- ── Caption bar ── -->
+    <div style="
+        flex-shrink: 0;
+        background: #0d0d14;
+        border-top: 1px solid #1e1e2e;
+        padding: 0.75rem 1.25rem 0.6rem;
+        min-height: 4.5rem;
+        display: flex; flex-direction: column; gap: 0.3rem;
+    " role="region" aria-label="Live caption" aria-live="assertive">
+
+        <p id="caption-text" style="
+            font-size: 1.1rem; font-weight:500;
+            color: #e8e8f0; line-height:1.55; margin:0;
+            transition: opacity 0.3s;
+        ">Click ▶ Start to begin.</p>
+
+        <div id="caption-tags" style="display:flex; flex-wrap:wrap; gap:0.25rem;"></div>
     </div>
-</div>
+
+</div><!-- end full-height flex -->
+
+<!-- Jinja values passed to JS via data attributes — no Jinja inside JS -->
+<div id="user-settings-data"
+     data-auto-speak="{{ 'true' if user.get('auto_speak', True) else 'false' }}"
+     data-speech-rate="{{ user.get('speech_rate', 165) }}"
+     style="display:none;"></div>
+
+<script>
+/* ── Dashboard-specific logic ──────────────────────────────────────────
+   app.js is loaded by base.html and exposes:
+     startPolling(), stopPolling(), readAloud(), addToMemory(),
+     clearMemory(), speakText(), sendVoiceCommand(), loadMemory()
+   ──────────────────────────────────────────────────────────────────── */
+
+/* Set user prefs — values injected via data attributes to avoid Jinja-in-JS */
+(function() {
+    var el = document.getElementById('user-settings-data');
+    window.USER_SETTINGS = {
+        auto_speak:  el.dataset.autoSpeak === 'true',
+        speech_rate: parseInt(el.dataset.speechRate, 10) || 165,
+    };
+})();
+
+let visionActive = false;
+let searchActive = false;
+let startupSpeechDone = false;  // Track if startup speech was already spoken
+
+/* ── Start ── */
+async function triggerStart() {
+    // Prevent re-triggering if already active
+    if (visionActive) return;
+    visionActive = true;
+
+    // Hide the placeholder so camera img is visible
+    const ph = document.getElementById("cam-placeholder");
+    if (ph) ph.style.display = "none";
+
+    _setDot("#4ade80", "STARTING");
+    setCaptionText("Initializing camera and AI model, please wait...");
+    
+    // Only speak startup message if not already starting
+    if (!startupSpeechDone) {
+        speakText("Starting up. Please wait.", 0);
+        startupSpeechDone = true;  // Mark that we've spoken startup
+    }
+
+    try {
+        const r = await fetch("/api/camera/start", { method: "POST" });
+        const d = await r.json();
+        console.log("[START]", d.status, d.message);
+    } catch(e) {
+        console.error("[START]", e);
+    }
+
+    startPolling();
+}
+
+/* ── Stop ── */
+async function triggerStop() {
+    visionActive = false;
+    searchActive = false;
+    startupSpeechDone = false;  // Reset so next start can speak again
+
+    stopPolling();
+    _setDot("#f87171", "STOPPED");
+    setCaptionText("Click ▶ Start to begin.");
+    _hideSearchOverlay();
+    speakText("Captions stopped.", 0);
+
+    try {
+        await fetch("/api/camera/stop", { method: "POST" });
+    } catch(e) { console.error("[STOP]", e); }
+}
+
+/* ── Search ── */
+function triggerSearch() {
+    sendVoiceCommand("search");
+}
+function triggerStopSearch() {
+    sendVoiceCommand("done searching");
+}
+
+/* ── Search overlay helpers ── */
+function _showSearchOverlay(msg) {
+    searchActive = true;
+    const ov = document.getElementById("search-overlay");
+    if (ov) ov.style.display = "flex";
+    const hint = document.getElementById("search-hint");
+    if (hint && msg) hint.innerHTML = msg;
+    document.getElementById("search-result-text").style.display = "none";
+}
+function _hideSearchOverlay() {
+    searchActive = false;
+    const ov = document.getElementById("search-overlay");
+    if (ov) ov.style.display = "none";
+}
+function _showSearchResult(text) {
+    const r = document.getElementById("search-result-text");
+    if (r) { r.textContent = text; r.style.display = "block"; }
+}
+
+/* ── Status dot helper ── */
+function _setDot(color, label) {
+    const dot  = document.getElementById("status-light");
+    const text = document.getElementById("status-text");
+    if (dot)  dot.style.background = color;
+    if (text) text.textContent     = label;
+}
+
+/* ── Caption text helper ── */
+function setCaptionText(text) {
+    const el = document.getElementById("caption-text");
+    if (el) el.textContent = text || "";
+}
+
+/* ── Hook into app.js updateUI ──────────────────────────────────────────
+   app.js calls window.updateUI(data) if defined before its own logic.
+   We use this to drive the search overlay and status dot.
+   ─────────────────────────────────────────────────────────────────────── */
+window.updateUI = function(data) {
+    /* Caption text */
+    setCaptionText(data.caption || "");
+
+    /* Tags */
+    const tagsEl = document.getElementById("caption-tags");
+    if (tagsEl) {
+        tagsEl.innerHTML = (data.objects || [])
+            .map(o => `<span class="tag">${_esc(o)}</span>`).join("");
+    }
+
+    /* Timestamp */
+    const timeEl = document.getElementById("caption-time");
+    if (timeEl) timeEl.textContent = data.updated_at ? "Last updated: " + data.updated_at : "";
+
+    /* Status dot */
+    if      (data.status === "LIVE")    _setDot("#4ade80", "LIVE");
+    else if (data.status === "SLOW")    _setDot("#facc15", "SLOW");
+    else if (data.status === "LOADING") _setDot("#facc15", "LOADING...");
+    else if (data.status === "PAUSED")  _setDot("#facc15", "SEARCH");
+    else if (data.status === "STOPPED") _setDot("#f87171", "STOPPED");
+    else if (data.status === "ERROR")   _setDot("#f87171", "ERROR");
+
+    /* LIVE → hide placeholder */
+    if (data.status === "LIVE" || data.status === "SLOW") {
+        const ph = document.getElementById("cam-placeholder");
+        if (ph) ph.style.display = "none";
+    }
+
+    /* Sync search overlay with server state */
+    if (data.status === "PAUSED" && !searchActive) {
+        _showSearchOverlay('Say what you\'re looking for.<br><em>e.g. "where is my phone"</em>');
+    } else if (data.status !== "PAUSED" && searchActive) {
+        _hideSearchOverlay();
+    }
+
+    /* Auto-speak new captions (but not during loading) */
+    if (data.caption && data.caption !== window._lastSpokenCaption
+            && window.USER_SETTINGS.auto_speak
+            && !searchActive
+            && data.status === "LIVE") {
+        speakText(data.caption, 1000);
+        window._lastSpokenCaption = data.caption;
+    }
+    
+    /* Reset startup flag once we get LIVE status - ready for next start */
+    if (data.status === "LIVE") {
+        startupSpeechDone = false;
+    }
+};
+
+/* ── Hook into app.js voice response handler ───────────────────────── */
+window._handleVoiceResponse = function(data) {
+    const resp = data.response || "Done.";
+
+    /* Speak the response */
+    speakText(resp, 0);
+
+    /* Show in voice-response element in base.html */
+    const respEl = document.getElementById("voice-response");
+    if (respEl) {
+        respEl.textContent   = resp;
+        respEl.style.display = "block";
+        setTimeout(() => { respEl.style.display = "none"; }, 6000);
+    }
+
+    if (data.type === "search_start") {
+        _showSearchOverlay('Say what you\'re looking for.<br><em>e.g. "where is my phone"</em>');
+        setCaptionText("Search mode active.");
+
+    } else if (data.type === "search_end") {
+        _hideSearchOverlay();
+        setCaptionText("Resuming live captions...");
+
+    } else if (data.type === "location" || data.type === "not_found") {
+        _showSearchResult(resp);
+
+    } else if (data.type === "start") {
+        triggerStart();
+
+    } else if (data.type === "stop") {
+        triggerStop();
+
+    } else if (["saved", "cleared", "list"].includes(data.type)) {
+        loadMemory();
+    }
+};
+
+/* ── Voice trigger map for app.js background recognition ───────────── */
+window.EXTRA_VOICE_TRIGGERS = {
+    "start":         () => triggerStart(),
+    "begin":         () => triggerStart(),
+    "stop vision":   () => triggerStop(),
+    "stop captions": () => triggerStop(),
+};
+
+function _esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+/* Initial voice panel state */
+const vp = document.getElementById("voice-command-panel");
+const vl = document.getElementById("voice-status-text");
+if (vp) vp.className = "voice-panel listening";
+if (vl) vl.textContent = 'Say "start" to begin · "search" to find · "stop" to pause';
+</script>
 {% endblock %}

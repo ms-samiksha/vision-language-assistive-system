@@ -3,37 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>See & Tell</title>
+    <title>See &amp; Tell</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Reset ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0a0a0f;
+            color: #e8e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Minimal top nav ── */
+        nav {
+            background: #11111a;
+            border-bottom: 1px solid #1e1e2e;
+            padding: 0.6rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            flex-shrink: 0;
+        }
+        .logo {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #7c6af7;
+            letter-spacing: 0.03em;
+        }
+        nav a {
+            color: #888;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        nav a:hover, nav a:focus {
+            color: #e8e8f0;
+            outline: 2px solid #7c6af7;
+            outline-offset: 2px;
+        }
+
+        main { flex: 1; display: flex; flex-direction: column; }
+
+        /* ── Voice panel — fixed bottom bar ── */
+        .voice-panel {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: #11111a;
+            border-top: 1px solid #1e1e2e;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 100;
+            min-height: 3rem;
+        }
+        .voice-status-dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            background: #333;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+        .voice-panel.listening  .voice-status-dot { background: #3b82f6; animation: pulse 1.4s infinite; }
+        .voice-panel.processing .voice-status-dot { background: #a78bfa; animation: pulse 0.5s infinite; }
+        .voice-panel.search     .voice-status-dot { background: #22c55e; animation: pulse 1s infinite; }
+        .voice-panel.response   .voice-status-dot { background: #60a5fa; }
+        .voice-panel.error      .voice-status-dot { background: #f87171; }
+
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+        #voice-status-text {
+            font-size: 0.82rem;
+            color: #999;
+            flex: 1;
+        }
+        #voice-transcript {
+            font-size: 0.78rem;
+            color: #555;
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #voice-response {
+            display: none;
+            font-size: 0.83rem;
+            color: #c4c4d8;
+            background: #1a1a28;
+            border: 1px solid #2e2e42;
+            border-radius: 6px;
+            padding: 0.3rem 0.7rem;
+            max-width: 320px;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Mic floating button ── */
+        .mic-floating-btn {
+            background: #7c6af7;
+            border: none;
+            border-radius: 50%;
+            width: 2.4rem; height: 2.4rem;
+            font-size: 1rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s, transform 0.1s;
+            display: flex; align-items: center; justify-content: center;
+            color: white;
+        }
+        .mic-floating-btn:hover   { background: #6355d4; transform: scale(1.08); }
+        .mic-floating-btn.listening {
+            background: #ef4444;
+            animation: pulse 1s infinite;
+        }
+
+        /* ── Shared page styles ── */
+        .page-container {
+            padding: 1.5rem;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: 4rem; /* room for voice bar */
+        }
+        h2 {
+            font-size: 1.1rem;
+            color: #c4c4d8;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        /* ── Buttons (shared across all pages) ── */
+        .btn {
+            border: none;
+            border-radius: 6px;
+            padding: 0.45rem 0.9rem;
+            font-size: 0.82rem;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 500;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+        .btn:hover:not(:disabled) { opacity: 0.85; transform: scale(1.02); }
+        .btn:active:not(:disabled) { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .btn-primary   { background: #7c6af7; color: #fff; }
+        .btn-secondary { background: #2e2e42; color: #ccc; }
+        .btn-warning   { background: #f59e0b; color: #000; }
+        .btn-accent    { background: #22c55e; color: #000; }
+        .btn-danger    { background: #ef4444; color: #fff; }
+        .btn-large     { padding: 0.65rem 1.4rem; font-size: 0.95rem; }
+
+        /* ── Tags ── */
+        .tag {
+            display: inline-block;
+            background: #1e1e2e;
+            border: 1px solid #2e2e42;
+            border-radius: 999px;
+            padding: 0.15rem 0.55rem;
+            font-size: 0.72rem;
+            color: #aaa;
+        }
+
+        /* ── Memory table ── */
+        .memory-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+        .memory-table th, .memory-table td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #1e1e2e;
+        }
+        .memory-table th {
+            color: #7c6af7;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .memory-table td { color: #c4c4d8; }
+        .memory-table tr:hover td { background: #11111a; }
+
+        /* ── Find result ── */
+        .result-card {
+            background: #11111a;
+            border: 1px solid #2e2e42;
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            color: #c4c4d8;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .result-card p { flex: 1; }
+
+        /* ── Find form ── */
+        .find-form .form-group { margin-bottom: 0.75rem; }
+        .find-form label {
+            display: block;
+            font-size: 0.82rem;
+            color: #888;
+            margin-bottom: 0.35rem;
+        }
+        .find-form input[type="text"] {
+            width: 100%; max-width: 400px;
+            background: #11111a;
+            border: 1px solid #2e2e42;
+            color: #e8e8f0;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .find-form input:focus {
+            outline: 2px solid #7c6af7;
+            border-color: transparent;
+        }
+
+        /* ── Settings form ── */
+        .form-group { margin-bottom: 1rem; }
+        label {
+            display: block;
+            font-size: 0.82rem;
+            color: #888;
+            margin-bottom: 0.35rem;
+        }
+        input[type="text"],
+        input[type="password"],
+        select {
+            background: #11111a;
+            border: 1px solid #2e2e42;
+            color: #e8e8f0;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+            width: 100%;
+            max-width: 400px;
+        }
+        input:focus, select:focus {
+            outline: 2px solid #7c6af7;
+            border-color: transparent;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .checkbox-group label { margin: 0; }
+        input[type="range"] {
+            width: 100%;
+            max-width: 300px;
+            accent-color: #7c6af7;
+        }
+    </style>
 </head>
-<body class="{{ 'mode-blind' if user and user.vision_assistance_level == 'Fully Blind' else 'mode-low-vision' if user and user.vision_assistance_level == 'Low Vision' else 'mode-standard' }}">
+<body>
 
-    <nav>
-        <div class="logo">See & Tell</div>
-        {% if user %}
-        <div class="nav-links">
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('memory') }}">Memory</a>
-            <a href="{{ url_for('find') }}">Find</a>
-            <a href="{{ url_for('settings') }}">Settings</a>
-            <a href="{{ url_for('logout') }}">Logout</a>
-        </div>
-        {% endif %}
-    </nav>
+<nav aria-label="Main navigation">
+    <span class="logo">👁 See &amp; Tell</span>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('memory') }}">Memory</a>
+    <a href="{{ url_for('find') }}">Find</a>
+    <a href="{{ url_for('settings') }}">Settings</a>
+</nav>
 
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+<main>
+    {% block content %}{% endblock %}
+</main>
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
-    <script>
-        // Pass user settings to JS
-        window.USER_SETTINGS = {
-            auto_speak: {{ 'true' if user and user.auto_speak else 'false' }},
-            speech_rate: {{ user.speech_rate if user else 165 }},
-            vision_mode: "{{ user.vision_assistance_level if user else 'Standard' }}"
-        };
-    </script>
+<!-- ── Fixed voice status bar — shown on every page ── -->
+<div id="voice-command-panel" class="voice-panel listening" aria-live="polite">
+    <div class="voice-status-dot"></div>
+    <span id="voice-status-text">Say "start" to begin · "search" to find · "stop" to pause</span>
+    <span id="voice-transcript"></span>
+    <div id="voice-response"></div>
+    <button id="mic-btn"
+            class="mic-floating-btn"
+            onclick="toggleVoiceCommand()"
+            aria-label="Voice command"
+            title="Click or speak a command">🎤</button>
+</div>
+
+<!-- app.js must load BEFORE initVoiceCommands() is called -->
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script>
+    /* Start background voice recognition on every page */
+    initVoiceCommands();
+</script>
 </body>
 </html>

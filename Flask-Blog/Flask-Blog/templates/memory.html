@@ -2,15 +2,16 @@
 
 {% block content %}
 <div class="page-container">
-    <h2>Object Memory</h2>
-    
-    <button onclick="clearMemory()" class="btn btn-danger">Clear Memory</button>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <h2>📝 Object Memory</h2>
+        <button onclick="clearMemory()" class="btn btn-danger">Clear All</button>
+    </div>
 
     <table class="memory-table">
         <thead>
             <tr>
                 <th>Object</th>
-                <th>Description</th>
+                <th>Last Seen</th>
                 <th>Time</th>
             </tr>
         </thead>
@@ -23,7 +24,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="3">No memories saved yet.</td>
+                <td colspan="3" style="color:#555; font-style:italic;">No memories saved yet.</td>
             </tr>
             {% endfor %}
         </tbody>

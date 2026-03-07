@@ -72,6 +72,8 @@ class CaptionSpeaker:
 
 def main():
     config = load_config()
+    print("Model:", config.model_name)
+    print("Device:", config.device)
     model = VisionLanguageModel(config.model_name, config.device)
     analyzer = FrameAnalyzer(config, model)
     fps = FPSCounter()
