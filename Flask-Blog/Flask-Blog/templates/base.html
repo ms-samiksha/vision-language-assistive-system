@@ -2,38 +2,434 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>See & Tell</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- PWA / home screen app -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="See &amp; Tell">
+    <meta name="theme-color" content="#0b0d14">
+    <title>See &amp; Tell</title>
+    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0b0d14;
+            --bg2:       #12151f;
+            --bg3:       #1a1e2e;
+            --border:    #252a3d;
+            --border2:   #2f3550;
+            --text:      #f0f2ff;
+            --text2:     #a8b0cc;
+            --text3:     #5a6180;
+            --amber:     #f5a623;
+            --amber-dim: #b87a18;
+            --amber-bg:  #1e1608;
+            --blue:      #4fa3e8;
+            --blue-bg:   #081420;
+            --green:     #3dd68c;
+            --green-bg:  #071a10;
+            --red:       #f25c5c;
+            --red-bg:    #1a0808;
+            --purple:    #8b7cf8;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+            --font-display: 'DM Serif Display', serif;
+            --radius:    12px;
+            --radius-lg: 20px;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Noise texture overlay ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        /* ── Navigation ── */
+        nav {
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.5rem;
+            padding-top: env(safe-area-inset-top);
+            height: calc(60px + env(safe-area-inset-top));
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            color: var(--amber);
+            letter-spacing: 0.01em;
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .logo-eye {
+            width: 28px; height: 28px;
+            background: var(--amber);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .logo-eye::after {
+            content: '';
+            width: 11px; height: 11px;
+            background: var(--bg);
+            border-radius: 50%;
+        }
+
+        nav a {
+            color: var(--text3);
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.15s;
+            letter-spacing: 0.02em;
+        }
+        nav a:hover {
+            color: var(--text);
+            background: var(--bg3);
+        }
+        nav a:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+            color: var(--text);
+        }
+        nav a.active {
+            color: var(--amber);
+            background: var(--amber-bg);
+        }
+
+        main { flex: 1; display: flex; flex-direction: column; position: relative; z-index: 1; }
+
+        /* ── Voice bar ── */
+        #voice-command-panel {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--bg2);
+            border-top: 2px solid var(--border);
+            padding: 0 0.75rem;
+            padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+            height: calc(48px + env(safe-area-inset-bottom));
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            z-index: 200;
+            transition: border-color 0.3s;
+        }
+        #voice-command-panel.listening  { border-top-color: var(--blue); }
+        #voice-command-panel.search     { border-top-color: var(--green); }
+        #voice-command-panel.processing { border-top-color: var(--purple); }
+        #voice-command-panel.response   { border-top-color: var(--amber); }
+        #voice-command-panel.error      { border-top-color: var(--red); }
+
+        .voice-status-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--border2);
+            flex-shrink: 0;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        #voice-command-panel.listening  .voice-status-dot {
+            background: var(--blue);
+            box-shadow: 0 0 8px var(--blue);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        #voice-command-panel.search     .voice-status-dot {
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse-dot 1.2s ease-in-out infinite;
+        }
+        #voice-command-panel.processing .voice-status-dot {
+            background: var(--purple);
+            box-shadow: 0 0 8px var(--purple);
+            animation: pulse-dot 0.6s ease-in-out infinite;
+        }
+        #voice-command-panel.response   .voice-status-dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+        #voice-command-panel.error      .voice-status-dot { background: var(--red); }
+
+        @keyframes pulse-dot { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:0.4; transform:scale(0.8)} }
+
+        #voice-status-text {
+            font-size: 0.72rem;
+            color: var(--text2);
+            flex: 1;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #voice-transcript {
+            display: none;
+        }
+        #voice-response {
+            display: none;
+            font-size: 0.85rem;
+            color: var(--text);
+            background: var(--amber-bg);
+            border: 1px solid var(--amber-dim);
+            border-radius: 8px;
+            padding: 0.3rem 0.8rem;
+            max-width: 340px;
+            animation: slide-up 0.2s ease;
+        }
+        @keyframes slide-up {
+            from { opacity:0; transform:translateY(4px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* ── Mic button ── */
+        #mic-btn {
+            background: var(--bg3);
+            border: 1.5px solid var(--border2);
+            border-radius: 50%;
+            width: 32px; height: 32px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text2);
+        }
+        #mic-btn:hover   { background: var(--bg3); border-color: var(--amber); color: var(--amber); transform: scale(1.06); }
+        #mic-btn.listening { background: var(--red-bg); border-color: var(--red); color: var(--red); animation: pulse-dot 1s ease-in-out infinite; }
+
+        /* ── Page container ── */
+        .page-container {
+            padding: 2rem 1.5rem;
+            max-width: 960px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: 5rem;
+        }
+
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .page-title-icon {
+            font-size: 1.4rem;
+            line-height: 1;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            border: none;
+            border-radius: var(--radius);
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:active:not(:disabled) { transform: translateY(0); }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .btn-primary   { background: var(--purple); color: #fff; box-shadow: 0 2px 12px rgba(139,124,248,0.3); }
+        .btn-primary:hover:not(:disabled) { background: #7a6ce0; box-shadow: 0 4px 18px rgba(139,124,248,0.4); }
+        .btn-accent    { background: var(--green); color: #001a09; box-shadow: 0 2px 12px rgba(61,214,140,0.25); }
+        .btn-accent:hover:not(:disabled) { background: #35c07e; }
+        .btn-warning   { background: var(--amber); color: #1a0e00; box-shadow: 0 2px 12px rgba(245,166,35,0.25); }
+        .btn-warning:hover:not(:disabled) { background: #e09820; }
+        .btn-secondary { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); }
+        .btn-secondary:hover:not(:disabled) { color: var(--text); border-color: var(--text3); }
+        .btn-danger    { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+        .btn-danger:hover:not(:disabled) { background: #2a0f0f; }
+        .btn-lg { padding: 0.85rem 1.8rem; font-size: 1rem; border-radius: 14px; }
+
+        /* ── Tags ── */
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            border-radius: 999px;
+            padding: 0.2rem 0.65rem;
+            font-size: 0.78rem;
+            color: var(--text2);
+            font-weight: 500;
+        }
+
+        /* ── Memory table ── */
+        .memory-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        .memory-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--border);
+            color: var(--text3);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+        .memory-table td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text2);
+            vertical-align: middle;
+        }
+        .memory-table tbody tr:hover td { background: var(--bg2); }
+        .memory-table td:first-child { color: var(--text); font-weight: 600; font-size: 1rem; }
+
+        /* ── Forms ── */
+        .form-group { margin-bottom: 1.5rem; }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text2);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        input[type="text"], input[type="password"], select {
+            background: var(--bg2);
+            border: 1.5px solid var(--border2);
+            color: var(--text);
+            border-radius: var(--radius);
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-family: var(--font-body);
+            width: 100%;
+            max-width: 480px;
+            transition: border-color 0.15s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px rgba(245,166,35,0.15);
+        }
+        .checkbox-group { display: flex; align-items: center; gap: 0.75rem; }
+        .checkbox-group label { margin: 0; text-transform: none; font-size: 1rem; color: var(--text); }
+        input[type="checkbox"] {
+            width: 20px; height: 20px;
+            accent-color: var(--amber);
+            cursor: pointer;
+        }
+        input[type="range"] { width: 100%; max-width: 400px; accent-color: var(--amber); }
+
+        /* ── Result card ── */
+        .result-card {
+            background: var(--green-bg);
+            border: 1.5px solid var(--green);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .result-card p {
+            flex: 1;
+            font-size: 1.15rem;
+            color: var(--green);
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        /* ── Find form ── */
+        .find-form input[type="text"] {
+            font-size: 1.1rem;
+            padding: 0.9rem 1.1rem;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+        /* ── Mobile optimisations ── */
+        @media (max-width: 640px) {
+            nav { padding: 0 0.75rem; gap: 0; }
+            nav a { padding: 0.5rem 0.6rem; font-size: 0.82rem; }
+            .logo { font-size: 1.1rem; }
+            .page-container { padding: 1rem 0.75rem; padding-bottom: 5rem; }
+            .btn { padding: 0.65rem 1rem; font-size: 0.88rem; }
+            .btn-lg { padding: 1rem 1.4rem; font-size: 1rem; }
+            #voice-status-text { font-size: 0.8rem; }
+            #voice-transcript { display: none; }
+            .memory-table { font-size: 0.85rem; }
+            .memory-table th, .memory-table td { padding: 0.6rem 0.6rem; }
+        }
+    </style>
 </head>
-<body class="{{ 'mode-blind' if user and user.vision_assistance_level == 'Fully Blind' else 'mode-low-vision' if user and user.vision_assistance_level == 'Low Vision' else 'mode-standard' }}">
+<body>
 
-    <nav>
-        <div class="logo">See & Tell</div>
-        {% if user %}
-        <div class="nav-links">
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('memory') }}">Memory</a>
-            <a href="{{ url_for('find') }}">Find</a>
-            <a href="{{ url_for('settings') }}">Settings</a>
-            <a href="{{ url_for('logout') }}">Logout</a>
-        </div>
-        {% endif %}
-    </nav>
+<nav aria-label="Main navigation">
+    <span class="logo">
+        <span class="logo-eye" aria-hidden="true"></span>
+        See &amp; Tell
+    </span>
+    <a href="{{ url_for('dashboard') }}" {% if request.endpoint=='dashboard' %}class="active"{% endif %}>Dashboard</a>
+    <a href="{{ url_for('memory') }}"    {% if request.endpoint=='memory' %}class="active"{% endif %}>Memory</a>
+    <a href="{{ url_for('find') }}"      {% if request.endpoint=='find' %}class="active"{% endif %}>Find</a>
+    <a href="{{ url_for('settings') }}"  {% if request.endpoint=='settings' %}class="active"{% endif %}>Settings</a>
+</nav>
 
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+<main>
+    {% block content %}{% endblock %}
+</main>
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
-    <script>
-        // Pass user settings to JS
-        window.USER_SETTINGS = {
-            auto_speak: {{ 'true' if user and user.auto_speak else 'false' }},
-            speech_rate: {{ user.speech_rate if user else 165 }},
-            vision_mode: "{{ user.vision_assistance_level if user else 'Standard' }}"
-        };
-    </script>
+<div id="voice-command-panel" class="voice-panel listening" aria-live="polite" aria-label="Voice command status">
+    <div class="voice-status-dot" aria-hidden="true"></div>
+    <span id="voice-status-text">Say "start" to begin &middot; "search" to find &middot; "stop" to pause</span>
+    <span id="voice-transcript" aria-live="polite"></span>
+    <div id="voice-response" role="status"></div>
+    <button id="mic-btn"
+            onclick="toggleVoiceCommand()"
+            aria-label="Toggle voice command"
+            title="Click or speak a command">🎤</button>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script>initVoiceCommands();</script>
 </body>
 </html>

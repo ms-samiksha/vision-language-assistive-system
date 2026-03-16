@@ -2,31 +2,54 @@
 
 {% block content %}
 <div class="page-container">
-    <h2>Object Memory</h2>
-    
-    <button onclick="clearMemory()" class="btn btn-danger">Clear Memory</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+        <h1 class="page-title">
+            <span class="page-title-icon">◈</span> Object Memory
+        </h1>
+        <div style="display:flex;gap:0.75rem;align-items:center;">
+            <span id="entry-count" style="font-size:0.82rem;color:var(--text3);font-family:var(--font-mono);"></span>
+            <button onclick="clearMemory()" class="btn btn-danger" aria-label="Clear all memory entries">⊘ Clear All</button>
+        </div>
+    </div>
 
-    <table class="memory-table">
-        <thead>
-            <tr>
-                <th>Object</th>
-                <th>Description</th>
-                <th>Time</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for memory in memories %}
-            <tr>
-                <td>{{ memory.object }}</td>
-                <td>{{ memory.description }}</td>
-                <td>{{ memory.timestamp }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="3">No memories saved yet.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
+        <table class="memory-table" role="table" aria-label="Saved object sightings">
+            <thead>
+                <tr>
+                    <th scope="col">Object</th>
+                    <th scope="col">Location</th>
+                    <th scope="col">Last Scene</th>
+                    <th scope="col">Time</th>
+                </tr>
+            </thead>
+            <tbody id="memory-table-body">
+                {% for memory in memories %}
+                <tr>
+                    <td>
+                        <strong>{{ memory.object }}</strong>
+                    </td>
+                    <td>
+                        {% if memory.location %}
+                            <span style="color:var(--amber);font-size:0.88rem;font-weight:500;">{{ memory.location }}</span>
+                        {% else %}
+                            <span style="color:var(--text3);font-style:italic;font-size:0.82rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.88rem;" title="{{ memory.description }}">
+                        {{ memory.description }}
+                    </td>
+                    <td style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text3);white-space:nowrap;">{{ memory.timestamp }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align:center;padding:3rem;color:var(--text3);font-style:italic;">
+                        No memories saved yet.<br>
+                        <span style="font-size:0.85rem;">Start captions and objects will be saved automatically.</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

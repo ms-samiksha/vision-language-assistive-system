@@ -1,22 +1,49 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="page-container">
-    <h2>Find Object</h2>
-    
-    <form method="POST" class="find-form">
-        <div class="form-group">
-            <label for="object">What are you looking for?</label>
-            <input type="text" id="object" name="object" placeholder="e.g. keys" required autofocus>
-        </div>
-        <button type="submit" class="btn btn-primary btn-large">Find</button>
-    </form>
+<div class="page-container" style="max-width:640px;">
+    <h1 class="page-title">
+        <span class="page-title-icon">⌕</span> Find Object
+    </h1>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;">
+        <form method="POST" class="find-form">
+            <div class="form-group">
+                <label for="object">What are you looking for?</label>
+                <input type="text" id="object" name="object"
+                       placeholder="e.g. keys, phone, glasses"
+                       required autofocus autocomplete="off"
+                       aria-describedby="find-hint"
+                       style="font-size:1.1rem;">
+                <p id="find-hint" style="margin-top:0.5rem;font-size:0.82rem;color:var(--text3);">
+                    Type an object name or use voice search on the dashboard.
+                </p>
+            </div>
+            <button type="submit" class="btn btn-warning btn-lg" style="width:100%;justify-content:center;">
+                ⌕ Find Object
+            </button>
+        </form>
+    </div>
 
     {% if result %}
-    <div class="result-card">
-        <p>{{ result }}</p>
-        <button onclick="speakText('{{ result }}')" class="btn btn-secondary">Read Result</button>
+    <div class="result-card" role="alert" aria-live="assertive">
+        <div style="font-size:1.8rem;line-height:1;flex-shrink:0;">📍</div>
+        <div style="flex:1;">
+            <p id="find-result-text">{{ result }}</p>
+        </div>
+        <button onclick="speakFindResult()" class="btn btn-secondary" aria-label="Read result aloud">
+            ♪ Read Aloud
+        </button>
     </div>
+    <script>
+        function speakFindResult() {
+            speakText(document.getElementById('find-result-text').textContent, 0);
+        }
+        // Auto-speak result
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() { speakFindResult(); }, 400);
+        });
+    </script>
     {% endif %}
 </div>
 {% endblock %}

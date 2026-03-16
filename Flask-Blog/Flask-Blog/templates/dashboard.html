@@ -1,25 +1,456 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="dashboard-container">
-    <div class="status-bar">
-        <div id="status-light" class="status-light"></div>
-        <span id="status-text">CONNECTING...</span>
-    </div>
+<div style="display:flex; flex-direction:column; height:calc(100vh - calc(48px + env(safe-area-inset-top)) - calc(48px + env(safe-area-inset-bottom))); overflow:hidden;">
 
-    <div class="card caption-card">
-        <h3>Live Caption</h3>
-        <p id="caption-text">Waiting for caption...</p>
-        <div class="tags" id="caption-tags">
-            <!-- Tags injected by JS -->
+    <!-- ── Control strip ── -->
+    <div id="control-strip" style="
+        display:flex; align-items:center; gap:0.35rem;
+        padding:0.35rem 0.5rem;
+        background:var(--bg2);
+        border-bottom:1px solid var(--border);
+        flex-shrink:0;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+    " role="toolbar" aria-label="Camera controls">
+        <style>#control-strip::-webkit-scrollbar{display:none}</style>
+
+        <!-- Status -->
+        <div style="display:flex;align-items:center;gap:0.3rem;flex-shrink:0;">
+            <div id="status-light" style="width:7px;height:7px;border-radius:50%;background:var(--border2);transition:all 0.3s;flex-shrink:0;"></div>
+            <span id="status-text" style="font-family:var(--font-mono);font-size:0.62rem;color:var(--text3);letter-spacing:0.08em;white-space:nowrap;">STOPPED</span>
         </div>
-        <div class="timestamp" id="caption-time"></div>
+        <div style="flex:1;min-width:2px;"></div>
+        <span id="caption-time" style="font-size:0.62rem;color:var(--text3);font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;"></span>
+
+        <button onclick="triggerStart()"  class="btn btn-accent"    style="padding:0.28rem 0.65rem;font-size:0.75rem;flex-shrink:0;" aria-label="Start">▶ Start</button>
+        <button onclick="triggerStop()"   class="btn btn-secondary" style="padding:0.28rem 0.55rem;font-size:0.75rem;flex-shrink:0;" aria-label="Stop">■ Stop</button>
+        <button onclick="triggerSearch()" class="btn btn-warning"   style="padding:0.28rem 0.6rem;font-size:0.75rem;flex-shrink:0;" aria-label="Search">⌕ Find</button>
+        <button onclick="readAloud()"     class="btn btn-primary"   style="padding:0.28rem 0.55rem;font-size:0.75rem;flex-shrink:0;" aria-label="Read">♪ Read</button>
+        <button onclick="addToMemory()"   class="btn btn-secondary" style="padding:0.28rem 0.55rem;font-size:0.75rem;flex-shrink:0;" aria-label="Save">⊕ Save</button>
     </div>
 
-    <div class="dashboard-actions">
-        <button onclick="fetchCaption()" class="btn btn-secondary">Refresh Caption</button>
-        <button onclick="readAloud()" class="btn btn-primary btn-large">Read Aloud</button>
-        <button onclick="addToMemory()" class="btn btn-accent">Add to Memory</button>
+    <!-- ── Camera area ── -->
+    <div style="flex:1;position:relative;background:#07080f;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+
+        <!-- Phone camera live preview via getUserMedia -->
+        <video id="phone-camera"
+               autoplay playsinline muted
+               style="max-width:100%;max-height:100%;object-fit:contain;display:none;"
+               aria-label="Live phone camera preview"></video>
+
+        <!-- Hidden canvas used to capture frames for BLIP -->
+        <canvas id="capture-canvas" style="display:none;" width="640" height="480"></canvas>
+
+        <!-- Placeholder (shown before camera starts) -->
+        <div id="cam-placeholder" style="
+            position:absolute;inset:0;
+            display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            gap:1.5rem;pointer-events:none;
+            background:radial-gradient(ellipse at center, #0f1120 0%, #07080f 100%);
+        ">
+            <div style="
+                width:100px;height:100px;
+                border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+                background:var(--amber-bg);
+                border:2px solid var(--amber-dim);
+                display:flex;align-items:center;justify-content:center;
+            ">
+                <div style="
+                    width:40px;height:40px;border-radius:50%;
+                    background:var(--amber-bg);border:2px solid var(--amber);
+                    display:flex;align-items:center;justify-content:center;
+                ">
+                    <div style="width:14px;height:14px;border-radius:50%;background:var(--amber);"></div>
+                </div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:1.1rem;color:var(--text2);font-weight:500;margin-bottom:0.4rem;">Camera not active</div>
+                <div style="font-size:0.9rem;color:var(--text3);">Say <strong style="color:var(--amber)">"start"</strong> or click ▶ Start</div>
+            </div>
+        </div>
+
+        <!-- Search overlay -->
+        <div id="search-overlay" style="
+            display:none;position:absolute;inset:0;
+            background:rgba(7,8,15,0.95);
+            flex-direction:column;align-items:center;justify-content:center;
+            gap:1.25rem;text-align:center;padding:2.5rem;
+            backdrop-filter:blur(4px);
+        ">
+            <!-- Animated search ring -->
+            <div style="position:relative;width:72px;height:72px;margin-bottom:0.5rem;">
+                <div style="
+                    position:absolute;inset:0;border-radius:50%;
+                    border:2px solid var(--green);
+                    animation:search-ring 2s linear infinite;
+                    opacity:0.6;
+                "></div>
+                <div style="
+                    position:absolute;inset:8px;border-radius:50%;
+                    border:2px solid var(--green);
+                    animation:search-ring 2s linear infinite reverse;
+                    opacity:0.3;
+                "></div>
+                <div style="
+                    position:absolute;inset:0;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:1.6rem;
+                ">⌕</div>
+            </div>
+            <div style="font-size:1.4rem;font-weight:700;color:var(--text);letter-spacing:0.02em;">Search Mode Active</div>
+            <div id="search-hint" style="font-size:1rem;color:var(--text2);line-height:1.7;max-width:340px;">
+                Say what you're looking for.<br>
+                <em style="color:var(--text3);">e.g. "where is my phone"</em>
+            </div>
+            <div id="search-result-text" style="
+                display:none;
+                font-size:1.1rem;font-weight:600;color:var(--green);
+                background:var(--green-bg);
+                border:1.5px solid var(--green);
+                border-radius:16px;padding:1rem 1.5rem;
+                max-width:420px;line-height:1.6;
+                animation:slide-up 0.25s ease;
+            "></div>
+            <button onclick="triggerStopSearch()" class="btn btn-secondary" style="margin-top:0.5rem;" aria-label="Exit search mode">
+                ✕ Done Searching
+            </button>
+        </div>
+
+        <!-- LIVE badge -->
+        <div id="live-badge" style="
+            display:none;position:absolute;top:12px;left:12px;
+            background:rgba(7,8,15,0.75);border:1px solid var(--border2);
+            border-radius:8px;padding:0.3rem 0.65rem;
+            display:none;align-items:center;gap:0.4rem;
+            font-family:var(--font-mono);font-size:0.7rem;color:var(--green);
+            letter-spacing:0.08em;
+            backdrop-filter:blur(8px);
+        ">
+            <span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+            LIVE
+        </div>
     </div>
+
+    <!-- ── Caption bar ── -->
+    <div style="
+        flex-shrink:0;
+        background:var(--bg2);
+        border-top:1px solid var(--border);
+        padding:0.55rem 0.8rem 0.45rem;
+        min-height:66px;
+    " role="region" aria-label="Live caption" aria-live="assertive" aria-atomic="true">
+
+        <p id="caption-text" style="
+            font-size:clamp(0.9rem, 4.2vw, 1.15rem);
+            font-weight:500;
+            color:var(--text);
+            line-height:1.5;
+            margin:0 0 0.3rem;
+            transition:opacity 0.3s;
+        ">Click ▶ Start to begin.</p>
+
+        <div id="caption-tags" style="display:flex;flex-wrap:wrap;gap:0.2rem;"></div>
+    </div>
+
 </div>
+
+<style>
+@keyframes search-ring { to { transform:rotate(360deg); } }
+</style>
+
+<div id="user-settings-data"
+     data-auto-speak="{{ 'true' if user.get('auto_speak', True) else 'false' }}"
+     data-speech-rate="{{ user.get('speech_rate', 165) }}"
+     style="display:none;"></div>
+
+<script>
+(function() {
+    var el = document.getElementById('user-settings-data');
+    window.USER_SETTINGS = {
+        auto_speak:  el.dataset.autoSpeak === 'true',
+        speech_rate: parseInt(el.dataset.speechRate, 10) || 165,
+    };
+})();
+
+let visionActive = false;
+let searchActive = false;
+let startupSpeechDone = false;
+let visionWasActiveBeforeSearch = false;  // tracks state before search mode
+
+// ── Phone camera capture ─────────────────────────────────────────────────────
+let _cameraStream    = null;   // MediaStream from getUserMedia
+let _frameTimer      = null;   // setInterval handle for frame posting
+let _frameCanvas     = null;
+let _frameCtx        = null;
+let _frameErrorCount = 0;
+
+async function _startPhoneCamera() {
+    try {
+        // Request rear camera on mobile, any camera on desktop
+        const constraints = {
+            video: {
+                facingMode: { ideal: "environment" },
+                width:  { ideal: 640 },
+                height: { ideal: 480 },
+            },
+            audio: false,
+        };
+        _cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById("phone-camera");
+        video.srcObject = _cameraStream;
+        video.style.display = "block";
+
+        // Set up capture canvas once video metadata is ready
+        video.addEventListener("loadedmetadata", () => {
+            _frameCanvas = document.getElementById("capture-canvas");
+            _frameCanvas.width  = video.videoWidth  || 640;
+            _frameCanvas.height = video.videoHeight || 480;
+            _frameCtx = _frameCanvas.getContext("2d");
+            log("CAM", `Phone camera ready: ${_frameCanvas.width}x${_frameCanvas.height}`);
+        }, { once: true });
+
+        // Start posting frames to server at ~5 fps
+        _frameTimer = setInterval(_postFrame, 200);
+        log("CAM", "Frame posting started");
+
+    } catch(err) {
+        log("CAM_ERR", "getUserMedia failed: " + err.message);
+        setCaptionText("Camera access denied. Please allow camera permission and try again.");
+        speakText("Camera access denied. Please allow camera permission.", 0);
+        visionActive = false;
+        _setDot("var(--red)", "ERROR");
+    }
+}
+
+function _stopPhoneCamera() {
+    if (_frameTimer) { clearInterval(_frameTimer); _frameTimer = null; }
+    if (_cameraStream) {
+        _cameraStream.getTracks().forEach(t => t.stop());
+        _cameraStream = null;
+    }
+    const video = document.getElementById("phone-camera");
+    if (video) { video.srcObject = null; video.style.display = "none"; }
+}
+
+async function _postFrame() {
+    if (!_frameCtx || !_frameCanvas) return;
+    const video = document.getElementById("phone-camera");
+    if (!video || video.readyState < 2) return;  // not ready yet
+
+    try {
+        _frameCtx.drawImage(video, 0, 0, _frameCanvas.width, _frameCanvas.height);
+        _frameCanvas.toBlob(async (blob) => {
+            if (!blob || !visionActive) return;
+            try {
+                await fetch("/api/camera/frame", {
+                    method:  "POST",
+                    headers: { "Content-Type": "image/jpeg" },
+                    body:    blob,
+                });
+                _frameErrorCount = 0;
+            } catch(e) {
+                if (++_frameErrorCount > 10) {
+                    log("CAM_ERR", "Frame post failing — stopping camera");
+                    _stopPhoneCamera();
+                }
+            }
+        }, "image/jpeg", 0.7);   // 70% quality — good enough for BLIP
+    } catch(e) {
+        log("CAM_ERR", "Frame capture error: " + e);
+    }
+}
+
+function triggerStart() {
+    if (visionActive) return;
+    visionActive = true;
+    const ph = document.getElementById("cam-placeholder");
+    if (ph) ph.style.display = "none";
+    const lb = document.getElementById("live-badge");
+    if (lb) lb.style.display = "flex";
+    _setDot("var(--amber)", "LOADING");
+    setCaptionText("Starting camera and AI model…");
+    if (!startupSpeechDone) { speakText("Starting up. Please wait.", 0); startupSpeechDone = true; }
+
+    // Start phone camera first, then tell server to initialise BLIP
+    _startPhoneCamera().then(() => {
+        fetch("/api/camera/start", {method:"POST"}).catch(console.error);
+    });
+    startPolling();
+}
+
+function triggerStop() {
+    visionActive = false; searchActive = false; startupSpeechDone = false;
+    visionWasActiveBeforeSearch = false;
+    stopPolling();
+    _stopPhoneCamera();   // release phone camera + stop frame posting
+    _setDot("var(--red)", "STOPPED");
+    setCaptionText("Click ▶ Start to begin.");
+    _hideSearchOverlay();
+    const lb = document.getElementById("live-badge");
+    if (lb) lb.style.display = "none";
+    speakText("Captions stopped.", 0);
+    fetch("/api/camera/stop", {method:"POST"}).catch(console.error);
+}
+
+function triggerSearch()     { sendVoiceCommand("search"); }
+function triggerStopSearch() {
+    // 1. Immediately reset ALL client state — don't wait for server
+    window.VOICE_MODE    = false;
+    searchActive         = false;
+    visionWasActiveBeforeSearch = false;
+    _hideSearchOverlay();
+
+    if (visionActive) {
+        setCaptionText("Resuming live captions…");
+    } else {
+        setCaptionText("Click ▶ Start to begin.");
+        _setDot("var(--red)", "STOPPED");
+    }
+
+    // 2. Tell server to clear searching_mode — use direct fetch, not sendCmd,
+    //    so dedup / cmdInFlight guards don't block it.
+    fetch("/api/voice/command", {
+        method:  "POST",
+        credentials: "same-origin",
+        headers: {"Content-Type": "application/json"},
+        body:    JSON.stringify({command: "done searching"}),
+    }).catch(() => {});
+}
+
+function _showSearchOverlay(msg) {
+    searchActive = true;
+    const ov = document.getElementById("search-overlay");
+    if (ov) { ov.style.display = "flex"; }
+    const hint = document.getElementById("search-hint");
+    if (hint && msg) hint.innerHTML = msg;
+    document.getElementById("search-result-text").style.display = "none";
+}
+function _hideSearchOverlay() {
+    searchActive = false;
+    const ov = document.getElementById("search-overlay");
+    if (ov) ov.style.display = "none";
+}
+function _showSearchResult(text) {
+    const r = document.getElementById("search-result-text");
+    if (r) { r.textContent = text; r.style.display = "block"; }
+}
+
+function _setDot(color, label) {
+    const dot  = document.getElementById("status-light");
+    const text = document.getElementById("status-text");
+    if (dot)  { dot.style.background = color; dot.style.boxShadow = `0 0 8px ${color}`; }
+    if (text) text.textContent = label;
+}
+
+function setCaptionText(text) {
+    const el = document.getElementById("caption-text");
+    if (el) el.textContent = text || "";
+}
+
+window.updateUI = function(data) {
+    // Only overwrite the caption if we have real content.
+    // fetchCaption already set d.caption = d.speak_text when a new event fired,
+    // so data.caption here is always the most current text.
+    if (data.caption && data.caption.trim()) {
+        setCaptionText(data.caption);
+    }
+
+    const tagsEl = document.getElementById("caption-tags");
+    if (tagsEl) {
+        const locTag = data.location
+            ? `<span class="tag" style="background:var(--amber-bg);border-color:var(--amber-dim);color:var(--amber);">📍 ${_esc(data.location)}</span>`
+            : "";
+        const objTags = (data.objects || []).map(o => `<span class="tag">${_esc(o)}</span>`).join("");
+        tagsEl.innerHTML = locTag + objTags;
+    }
+
+    const timeEl = document.getElementById("caption-time");
+    if (timeEl && data.updated_at) timeEl.textContent = data.updated_at;
+
+    if      (data.status === "LIVE")    { _setDot("var(--green)", "LIVE"); }
+    else if (data.status === "SLOW")    { _setDot("var(--amber)", "SLOW"); }
+    else if (data.status === "LOADING") { _setDot("var(--amber)", "LOADING…"); }
+    else if (data.status === "PAUSED")  { _setDot("var(--blue)",  "SEARCH"); }
+    else if (data.status === "STOPPED") { _setDot("var(--red)",   "STOPPED"); }
+    else if (data.status === "ERROR")   { _setDot("var(--red)",   "ERROR"); }
+
+    if (data.status === "LIVE" || data.status === "SLOW") {
+        const ph = document.getElementById("cam-placeholder");
+        if (ph) ph.style.display = "none";
+        const lb = document.getElementById("live-badge");
+        if (lb) lb.style.display = "flex";
+    }
+    if (data.status === "LIVE") startupSpeechDone = false;
+
+    if (data.status === "PAUSED" && !searchActive) {
+        _showSearchOverlay('Say what you\'re looking for.<br><em style="color:var(--text3)">e.g. "where is my phone"</em>');
+    }
+
+    // Caption speech is handled by fetchCaption() in app.js via speak_text field.
+    // speakText() here is only for UI feedback (start/stop/search confirmations).
+};
+
+window._handleVoiceResponse = function(data) {
+    const resp = data.response || "Done.";
+    speakText(resp, 0);
+    const respEl = document.getElementById("voice-response");
+    if (respEl) {
+        respEl.textContent = resp;
+        respEl.style.display = "block";
+        setTimeout(() => { respEl.style.display = "none"; }, 7000);
+    }
+    if (data.type === "search_start") {
+        visionWasActiveBeforeSearch = visionActive;  // remember if captions were running
+        _showSearchOverlay('Say what you\'re looking for.<br><em style="color:var(--text3)">e.g. "where is my phone"</em>');
+        setCaptionText("Search mode active.");
+    } else if (data.type === "search_end") {
+        _hideSearchOverlay();
+        if (visionWasActiveBeforeSearch && visionActive) {
+            // Vision was running before search — polling is still going, just resume UI
+            setCaptionText("Resuming live captions…");
+        } else if (visionWasActiveBeforeSearch && !visionActive) {
+            // Vision was running but somehow stopped — restart it
+            setCaptionText("Resuming live captions…");
+            triggerStart();
+        } else {
+            // Vision wasn't running before search — stay stopped
+            setCaptionText("Click ▶ Start to begin.");
+            _setDot("var(--red)", "STOPPED");
+        }
+        visionWasActiveBeforeSearch = false;
+    } else if (data.type === "location" || data.type === "not_found") {
+        _showSearchResult(resp);
+        const hint = document.getElementById("search-hint");
+        if (hint) hint.innerHTML = 'Say another object name, or say <strong style="color:var(--green)">"done searching"</strong> to resume.';
+    } else if (data.type === "ask") {
+        const hint = document.getElementById("search-hint");
+        if (hint) hint.innerHTML = resp + '<br><em style="color:var(--text3)">Say the object name clearly.</em>';
+    } else if (data.type === "start") {
+        triggerStart();
+    } else if (data.type === "stop") {
+        triggerStop();
+    } else if (["saved","cleared","list"].includes(data.type)) {
+        loadMemory();
+    }
+};
+
+window.EXTRA_VOICE_TRIGGERS = {
+    "start": () => triggerStart(),
+    "begin": () => triggerStart(),
+    "stop vision":   () => triggerStop(),
+    "stop captions": () => triggerStop(),
+};
+
+function _esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+const vp = document.getElementById("voice-command-panel");
+const vl = document.getElementById("voice-status-text");
+if (vp) vp.className = "voice-panel listening";
+if (vl) vl.textContent = 'Say "start" to begin · "search" to find · "stop" to pause';
+</script>
 {% endblock %}
