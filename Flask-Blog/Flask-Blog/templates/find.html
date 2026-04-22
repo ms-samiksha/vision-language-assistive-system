@@ -2,24 +2,54 @@
 
 {% block content %}
 <div class="page-container" style="max-width:640px;">
-    <h1 class="page-title">
-        <span class="page-title-icon">⌕</span> Find Object
-    </h1>
 
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;">
-        <form method="POST" class="find-form">
+    <!-- Header -->
+    <h1 style="font-family:var(--font-display);font-size:1.75rem;font-weight:700;color:var(--text);letter-spacing:-0.02em;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.65rem;">
+        <span style="
+            width:38px;height:38px;border-radius:var(--r-md);
+            background:linear-gradient(135deg,rgba(249,115,22,0.2),rgba(234,88,12,0.2));
+            border:1px solid rgba(249,115,22,0.3);
+            display:inline-flex;align-items:center;justify-content:center;
+            font-size:1.2rem;
+            box-shadow:0 0 12px rgba(249,115,22,0.2);
+        ">⌕</span>
+        Find Object
+    </h1>
+    <p style="font-size:0.9rem;color:var(--text3);margin-bottom:2rem;line-height:1.6;">
+        Search your memory for a previously seen object.
+    </p>
+
+    <!-- Search card -->
+    <div class="glass-card" style="position:relative;overflow:hidden;">
+        <!-- Ambient glow -->
+        <div style="
+            position:absolute;top:-40px;right:-40px;
+            width:160px;height:160px;border-radius:50%;
+            background:radial-gradient(circle,rgba(249,115,22,0.08) 0%,transparent 70%);
+            pointer-events:none;
+        "></div>
+
+        <form method="POST">
             <div class="form-group">
                 <label for="object">What are you looking for?</label>
-                <input type="text" id="object" name="object"
-                       placeholder="e.g. keys, phone, glasses"
-                       required autofocus autocomplete="off"
-                       aria-describedby="find-hint"
-                       style="font-size:1.1rem;">
-                <p id="find-hint" style="margin-top:0.5rem;font-size:0.82rem;color:var(--text3);">
+                <div style="position:relative;">
+                    <span style="
+                        position:absolute;left:1rem;top:50%;transform:translateY(-50%);
+                        font-size:1.1rem;color:var(--text3);pointer-events:none;
+                    ">⌕</span>
+                    <input type="text"
+                           id="object" name="object"
+                           placeholder="e.g. keys, phone, glasses…"
+                           required autofocus autocomplete="off"
+                           aria-describedby="find-hint"
+                           style="padding-left:2.6rem;font-size:1.05rem;">
+                </div>
+                <p id="find-hint" style="margin-top:0.55rem;font-size:0.8rem;color:var(--text3);">
                     Type an object name or use voice search on the dashboard.
                 </p>
             </div>
-            <button type="submit" class="btn btn-warning btn-lg" style="width:100%;justify-content:center;">
+
+            <button type="submit" class="btn btn-warning btn-lg" style="width:100%;justify-content:center;font-size:1rem;letter-spacing:0.02em;">
                 ⌕ Find Object
             </button>
         </form>
@@ -29,21 +59,25 @@
     <div class="result-card" role="alert" aria-live="assertive">
         <div style="font-size:1.8rem;line-height:1;flex-shrink:0;">📍</div>
         <div style="flex:1;">
-            <p id="find-result-text">{{ result }}</p>
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--neon-green);margin-bottom:0.4rem;font-family:var(--font-mono);">Found</div>
+            <p id="find-result-text" style="font-size:1.1rem;color:var(--text);line-height:1.65;font-weight:500;">{{ result }}</p>
         </div>
-        <button onclick="speakFindResult()" class="btn btn-secondary" aria-label="Read result aloud">
-            ♪ Read Aloud
+        <button onclick="speakFindResult()"
+                class="btn btn-secondary"
+                style="align-self:flex-start;padding:0.5rem 0.85rem;font-size:0.82rem;"
+                aria-label="Read result aloud">
+            ♪ Read
         </button>
     </div>
     <script>
         function speakFindResult() {
             speakText(document.getElementById('find-result-text').textContent, 0);
         }
-        // Auto-speak result
         window.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() { speakFindResult(); }, 400);
         });
     </script>
     {% endif %}
+
 </div>
 {% endblock %}

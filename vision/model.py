@@ -72,7 +72,7 @@ class HallucinationFilter:
         "accident", "crash", "collision",
         "victim", "suspect", "criminal",
         "robbery", "robbed", "robbing",
-        "assault", "assaulted",
+        "assault", "assaulted", "raped" ,
         # Medical emergencies
         "unconscious", "bleeding", "blood",
         "emergency", "ambulance", "stretcher",

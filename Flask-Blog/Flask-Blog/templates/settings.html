@@ -1,75 +1,126 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="page-container" style="max-width:640px;">
-    <h1 class="page-title">
-        <span class="page-title-icon">⚙</span> Settings
+<div class="page-container" style="max-width:620px;">
+
+    <!-- Header -->
+    <h1 style="font-family:var(--font-display);font-size:1.75rem;font-weight:700;color:var(--text);letter-spacing:-0.02em;margin-bottom:0.4rem;display:flex;align-items:center;gap:0.65rem;">
+        <span style="
+            width:38px;height:38px;border-radius:var(--r-md);
+            background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(14,165,233,0.15));
+            border:1px solid rgba(56,189,248,0.25);
+            display:inline-flex;align-items:center;justify-content:center;
+            font-size:1.1rem;
+            box-shadow:0 0 12px rgba(56,189,248,0.15);
+        ">⚙</span>
+        Settings
     </h1>
+    <p style="font-size:0.88rem;color:var(--text3);margin-bottom:2rem;">Customize your assistive experience.</p>
 
     <form method="POST">
-        <!-- Vision level -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:1rem;">
-            <div class="form-group" style="margin-bottom:0;">
-                <label for="vision_assistance_level">Vision Assistance Level</label>
-                <select id="vision_assistance_level" name="vision_assistance_level" aria-describedby="vision-hint">
-                    <option value="Standard"    {% if user.vision_assistance_level == 'Standard'    %}selected{% endif %}>Standard</option>
-                    <option value="Low Vision"  {% if user.vision_assistance_level == 'Low Vision'  %}selected{% endif %}>Low Vision</option>
-                    <option value="Fully Blind" {% if user.vision_assistance_level == 'Fully Blind' %}selected{% endif %}>Fully Blind</option>
-                </select>
-                <p id="vision-hint" style="margin-top:0.5rem;font-size:0.82rem;color:var(--text3);">
-                    Adjusts caption verbosity and auto-speak defaults.
-                </p>
-            </div>
-        </div>
 
-        <!-- Speech -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:1rem;">
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="auto_speak" name="auto_speak"
-                           {% if user.auto_speak %}checked{% endif %}
-                           aria-describedby="auto-speak-hint">
-                    <label for="auto_speak">Auto-speak captions</label>
-                </div>
-                <p id="auto-speak-hint" style="margin-top:0.35rem;font-size:0.82rem;color:var(--text3);margin-left:2rem;">
-                    Automatically read every new caption aloud via SAPI.
-                </p>
+        <!-- ── Section: Vision ── -->
+        <div style="margin-bottom:0.65rem;">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:0.6rem;font-family:var(--font-mono);padding-left:0.25rem;">
+                Vision
             </div>
-
-            <div class="form-group" style="margin-bottom:0;">
-                <label for="speech_rate">
-                    Speech Rate &nbsp;
-                    <span id="rate-value" style="color:var(--amber);font-family:var(--font-mono);">{{ user.speech_rate }}</span>
-                </label>
-                <div style="display:flex;align-items:center;gap:1rem;max-width:400px;">
-                    <span style="font-size:0.8rem;color:var(--text3);">Slower</span>
-                    <input type="range" id="speech_rate" name="speech_rate"
-                           min="140" max="190" value="{{ user.speech_rate }}"
-                           style="flex:1;"
-                           aria-valuemin="140" aria-valuemax="190" aria-valuenow="{{ user.speech_rate }}"
-                           oninput="document.getElementById('rate-value').textContent=this.value;this.setAttribute('aria-valuenow',this.value)">
-                    <span style="font-size:0.8rem;color:var(--text3);">Faster</span>
+            <div class="glass-card" style="padding:1.5rem;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="vision_assistance_level">Assistance Level</label>
+                    <select id="vision_assistance_level" name="vision_assistance_level" aria-describedby="vision-hint">
+                        <option value="Standard"    {% if user.vision_assistance_level == 'Standard'    %}selected{% endif %}>Standard</option>
+                        <option value="Low Vision"  {% if user.vision_assistance_level == 'Low Vision'  %}selected{% endif %}>Low Vision</option>
+                        <option value="Fully Blind" {% if user.vision_assistance_level == 'Fully Blind' %}selected{% endif %}>Fully Blind</option>
+                    </select>
+                    <p id="vision-hint" style="margin-top:0.55rem;font-size:0.8rem;color:var(--text3);line-height:1.5;">
+                        Adjusts caption verbosity and auto-speak defaults.
+                    </p>
                 </div>
             </div>
         </div>
 
-        <!-- Important objects -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:1.5rem;">
-            <div class="form-group" style="margin-bottom:0;">
-                <label for="important_objects">Important Objects</label>
-                <input type="text" id="important_objects" name="important_objects"
-                       value="{{ user.important_objects|join(', ') }}"
-                       placeholder="phone, keys, wallet, glasses"
-                       aria-describedby="obj-hint">
-                <p id="obj-hint" style="margin-top:0.5rem;font-size:0.82rem;color:var(--text3);">
-                    Comma-separated. These are auto-saved to memory whenever BLIP sees them.
-                </p>
+        <!-- ── Section: Voice & Speech ── -->
+        <div style="margin-top:1.25rem;margin-bottom:0.65rem;">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:0.6rem;font-family:var(--font-mono);padding-left:0.25rem;">
+                Voice &amp; Speech
+            </div>
+            <div class="glass-card" style="padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;">
+
+                <!-- Auto-speak toggle -->
+                <div>
+                    <div class="toggle-wrap">
+                        <label class="toggle" style="margin:0;">
+                            <input type="checkbox" id="auto_speak" name="auto_speak"
+                                   {% if user.auto_speak %}checked{% endif %}
+                                   aria-describedby="auto-speak-hint">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Auto-speak captions</span>
+                    </div>
+                    <p id="auto-speak-hint" style="font-size:0.8rem;color:var(--text3);margin-top:0.55rem;margin-left:56px;line-height:1.5;">
+                        Automatically read every new caption aloud.
+                    </p>
+                </div>
+
+                <!-- Divider -->
+                <div style="height:1px;background:var(--border);margin:0 -0.5rem;"></div>
+
+                <!-- Speech rate -->
+                <div>
+                    <label for="speech_rate" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                        <span>Speech Rate</span>
+                        <span id="rate-value" style="
+                            background:rgba(168,85,247,0.1);
+                            border:1px solid rgba(168,85,247,0.25);
+                            border-radius:var(--r-full);
+                            padding:0.15rem 0.7rem;
+                            font-size:0.8rem;
+                            color:var(--neon-purple);
+                            font-family:var(--font-mono);
+                            font-weight:600;
+                        ">{{ user.speech_rate }}</span>
+                    </label>
+                    <div style="padding:0 0.25rem;">
+                        <input type="range" id="speech_rate" name="speech_rate"
+                               min="140" max="190"
+                               value="{{ user.speech_rate }}"
+                               aria-valuemin="140" aria-valuemax="190"
+                               aria-valuenow="{{ user.speech_rate }}"
+                               oninput="document.getElementById('rate-value').textContent=this.value;this.setAttribute('aria-valuenow',this.value)">
+                        <div style="display:flex;justify-content:space-between;margin-top:0.5rem;">
+                            <span style="font-size:0.72rem;color:var(--text3);">Slower</span>
+                            <span style="font-size:0.72rem;color:var(--text3);">Faster</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <button type="submit" class="btn btn-accent btn-lg" style="width:100%;justify-content:center;">
+        <!-- ── Section: Preferences ── -->
+        <div style="margin-top:1.25rem;margin-bottom:0.65rem;">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:0.6rem;font-family:var(--font-mono);padding-left:0.25rem;">
+                Preferences
+            </div>
+            <div class="glass-card" style="padding:1.5rem;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="important_objects">Important Objects</label>
+                    <input type="text"
+                           id="important_objects" name="important_objects"
+                           value="{{ user.important_objects|join(', ') }}"
+                           placeholder="phone, keys, wallet, glasses"
+                           aria-describedby="obj-hint">
+                    <p id="obj-hint" style="margin-top:0.55rem;font-size:0.8rem;color:var(--text3);line-height:1.5;">
+                        Comma-separated. Auto-saved to memory whenever seen.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save button -->
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:1.5rem;font-size:1rem;">
             ✓ Save Changes
         </button>
+
     </form>
 </div>
 {% endblock %}

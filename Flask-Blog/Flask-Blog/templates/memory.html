@@ -2,54 +2,212 @@
 
 {% block content %}
 <div class="page-container">
+
+    <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
-        <h1 class="page-title">
-            <span class="page-title-icon">◈</span> Object Memory
-        </h1>
-        <div style="display:flex;gap:0.75rem;align-items:center;">
-            <span id="entry-count" style="font-size:0.82rem;color:var(--text3);font-family:var(--font-mono);"></span>
-            <button onclick="clearMemory()" class="btn btn-danger" aria-label="Clear all memory entries">⊘ Clear All</button>
+        <div>
+            <h1 style="font-family:var(--font-display);font-size:1.75rem;font-weight:700;color:var(--text);letter-spacing:-0.02em;display:flex;align-items:center;gap:0.6rem;">
+                <span style="
+                    width:38px;height:38px;border-radius:var(--r-md);
+                    background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.2));
+                    border:1px solid rgba(168,85,247,0.3);
+                    display:inline-flex;align-items:center;justify-content:center;
+                    font-size:1.1rem;
+                    box-shadow:0 0 12px rgba(168,85,247,0.2);
+                ">◈</span>
+                Object Memory
+            </h1>
+            <p id="entry-count" style="font-size:0.8rem;color:var(--text3);font-family:var(--font-mono);margin-top:0.4rem;"></p>
         </div>
+        <button onclick="clearMemory()" class="btn btn-danger" aria-label="Clear all memory">
+            ⊘ Clear All
+        </button>
     </div>
 
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
-        <table class="memory-table" role="table" aria-label="Saved object sightings">
-            <thead>
-                <tr>
-                    <th scope="col">Object</th>
-                    <th scope="col">Location</th>
-                    <th scope="col">Last Scene</th>
-                    <th scope="col">Time</th>
-                </tr>
-            </thead>
-            <tbody id="memory-table-body">
-                {% for memory in memories %}
-                <tr>
-                    <td>
-                        <strong>{{ memory.object }}</strong>
-                    </td>
-                    <td>
-                        {% if memory.location %}
-                            <span style="color:var(--amber);font-size:0.88rem;font-weight:500;">{{ memory.location }}</span>
-                        {% else %}
-                            <span style="color:var(--text3);font-style:italic;font-size:0.82rem;">—</span>
-                        {% endif %}
-                    </td>
-                    <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.88rem;" title="{{ memory.description }}">
-                        {{ memory.description }}
-                    </td>
-                    <td style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text3);white-space:nowrap;">{{ memory.timestamp }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" style="text-align:center;padding:3rem;color:var(--text3);font-style:italic;">
-                        No memories saved yet.<br>
-                        <span style="font-size:0.85rem;">Start captions and objects will be saved automatically.</span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Memory grid -->
+    <div id="memory-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+
+        {% for memory in memories %}
+        <div class="memory-card" style="
+            background:rgba(11,15,30,0.7);
+            backdrop-filter:blur(10px);
+            border:1px solid var(--border);
+            border-radius:var(--r-xl);
+            padding:1.25rem 1.4rem;
+            transition:all 0.25s ease;
+            position:relative;
+            overflow:hidden;
+        ">
+            <!-- Top glow accent -->
+            <div style="
+                position:absolute;top:0;left:1.5rem;right:1.5rem;height:1px;
+                background:linear-gradient(90deg,transparent,rgba(168,85,247,0.4),transparent);
+            "></div>
+
+            <!-- Object name + badge -->
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;">
+                <span style="
+                    font-family:var(--font-display);
+                    font-size:1.05rem;font-weight:700;
+                    color:var(--text);
+                    letter-spacing:-0.01em;
+                    line-height:1.2;
+                ">{{ memory.object }}</span>
+
+                {% if memory.location %}
+                <span style="
+                    display:inline-flex;align-items:center;gap:0.3rem;
+                    background:rgba(249,115,22,0.1);
+                    border:1px solid rgba(249,115,22,0.25);
+                    border-radius:var(--r-full);
+                    padding:0.2rem 0.65rem;
+                    font-size:0.72rem;color:var(--neon-orange);
+                    font-weight:600;white-space:nowrap;flex-shrink:0;
+                ">📍 {{ memory.location }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Description -->
+            <p style="
+                font-size:0.85rem;color:var(--text2);
+                line-height:1.55;margin-bottom:0.8rem;
+                display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+            " title="{{ memory.description }}">{{ memory.description }}</p>
+
+            <!-- Timestamp -->
+            <div style="display:flex;align-items:center;gap:0.4rem;">
+                <span style="width:4px;height:4px;border-radius:50%;background:var(--border3);"></span>
+                <span style="font-size:0.7rem;color:var(--text3);font-family:var(--font-mono);">{{ memory.timestamp }}</span>
+            </div>
+        </div>
+        {% else %}
+        <!-- Empty state -->
+        <div id="memory-empty" style="
+            grid-column:1/-1;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            gap:1.25rem;padding:4rem 2rem;
+            text-align:center;
+        ">
+            <div style="
+                width:72px;height:72px;border-radius:50%;
+                border:1.5px solid var(--border2);
+                display:flex;align-items:center;justify-content:center;
+                font-size:1.8rem;color:var(--text3);
+            ">◈</div>
+            <div>
+                <div style="font-size:1.1rem;font-weight:600;color:var(--text2);margin-bottom:0.4rem;">No memories yet</div>
+                <div style="font-size:0.85rem;color:var(--text3);line-height:1.6;">Start live captions and objects<br>will be saved automatically.</div>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="font-size:0.88rem;">
+                ▶ Go to Dashboard
+            </a>
+        </div>
+        {% endfor %}
+
     </div>
+
+    <!-- Fallback table body (kept for JS dynamic updates via loadMemory()) -->
+    <table style="display:none;" aria-hidden="true">
+        <tbody id="memory-table-body"></tbody>
+    </table>
+
 </div>
+
+<style>
+.memory-card:hover {
+    border-color: rgba(168,85,247,0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(168,85,247,0.08);
+}
+
+/* JS-rendered cards via loadMemory() */
+#memory-grid-dynamic {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+</style>
+
+<script>
+// Override loadMemory to render card UI instead of table rows
+window._origLoadMemory = window.loadMemory;
+window.loadMemory = function() {
+    fetch("/api/memory", {credentials:"same-origin"})
+        .then(r => r.json())
+        .then(d => {
+            const items = d.memories || [];
+            const grid  = document.getElementById("memory-grid");
+            if (!grid) return;
+
+            const cnt = document.getElementById("entry-count");
+
+            if (!items.length) {
+                if (cnt) cnt.textContent = "";
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;padding:4rem 2rem;text-align:center;">
+                        <div style="width:72px;height:72px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:var(--text3);">◈</div>
+                        <div>
+                            <div style="font-size:1.1rem;font-weight:600;color:var(--text2);margin-bottom:0.4rem;">No memories yet</div>
+                            <div style="font-size:0.85rem;color:var(--text3);line-height:1.6;">Start live captions and objects<br>will be saved automatically.</div>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            const counts = {};
+            items.forEach(m => {
+                const k = (m.object || "").toLowerCase().trim();
+                counts[k] = (counts[k] || 0) + 1;
+            });
+
+            if (cnt) {
+                const objCount = Object.keys(counts).length;
+                cnt.textContent = `${items.length} sighting${items.length !== 1 ? "s" : ""} · ${objCount} object${objCount !== 1 ? "s" : ""}`;
+            }
+
+            function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+            grid.innerHTML = items.map(m => {
+                const k = (m.object || "").toLowerCase().trim();
+                const n = counts[k] || 1;
+                const badge = n > 1
+                    ? `<span style="background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.25);color:var(--neon-purple);font-size:0.68rem;padding:0.12rem 0.45rem;border-radius:var(--r-full);font-weight:600;">${n}×</span>`
+                    : "";
+                const locTag = m.location
+                    ? `<span style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);border-radius:var(--r-full);padding:0.2rem 0.65rem;font-size:0.72rem;color:var(--neon-orange);font-weight:600;white-space:nowrap;flex-shrink:0;">📍 ${esc(m.location)}</span>`
+                    : "";
+                return `<div class="memory-card" style="background:rgba(11,15,30,0.7);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:var(--r-xl);padding:1.25rem 1.4rem;transition:all 0.25s ease;position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;left:1.5rem;right:1.5rem;height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,0.4),transparent);"></div>
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;">
+                        <span style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:var(--text);letter-spacing:-0.01em;line-height:1.2;">${esc(m.object || "")} ${badge}</span>
+                        ${locTag}
+                    </div>
+                    <p style="font-size:0.85rem;color:var(--text2);line-height:1.55;margin-bottom:0.8rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${esc(m.description || "")}">${esc(m.description || "")}</p>
+                    <div style="display:flex;align-items:center;gap:0.4rem;">
+                        <span style="width:4px;height:4px;border-radius:50%;background:var(--border3);"></span>
+                        <span style="font-size:0.7rem;color:var(--text3);font-family:var(--font-mono);">${esc(m.timestamp || "")}</span>
+                    </div>
+                </div>`;
+            }).join("");
+
+            // Re-apply hover effect for JS-rendered cards
+            grid.querySelectorAll(".memory-card").forEach(card => {
+                card.addEventListener("mouseenter", ()=>{
+                    card.style.borderColor = "rgba(168,85,247,0.25)";
+                    card.style.transform = "translateY(-2px)";
+                    card.style.boxShadow = "0 8px 32px rgba(0,0,0,0.3)";
+                });
+                card.addEventListener("mouseleave", ()=>{
+                    card.style.borderColor = "var(--border)";
+                    card.style.transform = "";
+                    card.style.boxShadow = "";
+                });
+            });
+        }).catch(() => {});
+};
+
+// Load on page ready
+document.addEventListener("DOMContentLoaded", () => { loadMemory(); });
+</script>
+
 {% endblock %}
